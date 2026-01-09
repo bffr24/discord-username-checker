@@ -36,7 +36,7 @@ user:pass@10.0.0.2:3128
 
 Custom usernames:
 ```
-alpha
-alpha_dev
-alpha.dev
+bffr
+test
+mother
 ```
