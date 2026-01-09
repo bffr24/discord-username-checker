@@ -20,8 +20,8 @@ class DiscordUsernameChecker:
         self.stop_event = threading.Event()
         self.threads = []
 
-        self.lock = threading.Lock()  # To protect shared data
-        self.tried_usernames = set()  # Prevent duplicates of random usernames only
+        self.lock = threading.Lock()
+        self.tried_usernames = set()
 
         self.custom_queue = queue.Queue()
 
@@ -35,7 +35,6 @@ class DiscordUsernameChecker:
     def create_widgets(self):
         pad = 10
 
-        # Webhook Fields
         webhook_frame = ttk.LabelFrame(self.root, text="Webhooks")
         webhook_frame.place(x=pad, y=pad, width=780, height=70)
 
@@ -47,19 +46,16 @@ class DiscordUsernameChecker:
         self.webhook_custom_entry = ttk.Entry(webhook_frame)
         self.webhook_custom_entry.place(x=140, y=35, width=620, height=20)
 
-        # Proxy Field
         proxy_frame = ttk.LabelFrame(self.root, text="Proxies (ip:port or user:pass@ip:port)")
         proxy_frame.place(x=pad, y=90, width=380, height=120)
         self.proxy_text = tk.Text(proxy_frame, height=6, width=47)
         self.proxy_text.pack(padx=5, pady=5)
 
-        # Custom username list
         custom_frame = ttk.LabelFrame(self.root, text="Custom Usernames (one per line)")
         custom_frame.place(x=400, y=90, width=380, height=120)
         self.custom_text = tk.Text(custom_frame, height=6, width=47)
         self.custom_text.pack(padx=5, pady=5)
 
-        # Username generation settings (compact)
         settings_frame = ttk.LabelFrame(self.root, text="Random Username Settings")
         settings_frame.place(x=pad, y=220, width=770, height=90)
 
@@ -81,7 +77,6 @@ class DiscordUsernameChecker:
         ttk.Radiobutton(settings_frame, text="Start", variable=self.prefix_pos_var, value="start").place(x=140, y=40)
         ttk.Radiobutton(settings_frame, text="End", variable=self.prefix_pos_var, value="end").place(x=200, y=40)
 
-        # Mode selection
         mode_frame = ttk.LabelFrame(self.root, text="Mode")
         mode_frame.place(x=pad, y=320, width=770, height=50)
         self.mode_var = tk.StringVar()
@@ -89,7 +84,6 @@ class DiscordUsernameChecker:
         ttk.Radiobutton(mode_frame, text="Random only", variable=self.mode_var, value="random").place(x=150, y=10)
         ttk.Radiobutton(mode_frame, text="Both", variable=self.mode_var, value="both").place(x=300, y=10)
 
-        # Thread count input
         thread_frame = ttk.LabelFrame(self.root, text="Threads")
         thread_frame.place(x=pad, y=380, width=770, height=50)
         ttk.Label(thread_frame, text="Threads (per mode):").place(x=10, y=10)
@@ -97,7 +91,6 @@ class DiscordUsernameChecker:
         self.thread_entry = ttk.Entry(thread_frame, textvariable=self.thread_count_var, width=5)
         self.thread_entry.place(x=140, y=10)
 
-        # Control buttons
         control_frame = ttk.Frame(self.root)
         control_frame.place(x=pad, y=440, width=770, height=40)
         self.start_btn = ttk.Button(control_frame, text="Start", command=self.start_checking)
@@ -106,7 +99,6 @@ class DiscordUsernameChecker:
         self.stop_btn.pack(side="left", padx=5)
         ttk.Button(control_frame, text="Clear Log", command=self.clear_log).pack(side="left", padx=5)
 
-        # Log output
         log_frame = ttk.LabelFrame(self.root, text="Log Output")
         log_frame.place(x=pad, y=490, width=770, height=180)
         self.log_text = tk.Text(log_frame, bg="#111", fg="#0f0", font=("Consolas", 10))
@@ -131,7 +123,6 @@ class DiscordUsernameChecker:
         self.thread_count_var.set(c.get("thread_count", 5))
 
     def save_config(self):
-        # Prepare dictionary for saving
         self.config["webhook_random"] = self.webhook_random_entry.get()
         self.config["webhook_custom"] = self.webhook_custom_entry.get()
         self.config["proxies"] = self.proxy_text.get("1.0", tk.END).strip()
@@ -190,7 +181,6 @@ class DiscordUsernameChecker:
                 retry_after = resp.json().get("retry_after", 1)
                 self.log(f"[Webhook Rate Limit] Sleeping {retry_after}s...")
                 time.sleep(retry_after)
-                # Retry once
                 resp = requests.post(url, json={"content": message}, timeout=10)
             if resp.status_code != 204:
                 self.log(f"[Webhook Error] Status {resp.status_code}: {resp.text}")
@@ -215,7 +205,6 @@ class DiscordUsernameChecker:
             return rand_part + prefix
 
     def check_username(self, username, webhook_url, is_custom=False):
-        # For random usernames, skip if already tried
         if not is_custom:
             with self.lock:
                 if username in self.tried_usernames:
@@ -263,11 +252,10 @@ class DiscordUsernameChecker:
                 try:
                     username = self.custom_queue.get_nowait()
                 except queue.Empty:
-                    # No more custom usernames - stop this thread
                     break
                 self.check_username(username, webhook_url, is_custom=True)
 
-            time.sleep(0.1)  # slight delay to avoid hammering
+            time.sleep(0.1)
 
     def start_checking(self):
         if self.running:
@@ -276,7 +264,6 @@ class DiscordUsernameChecker:
         mode = self.mode_var.get()
         custom_list = [u.strip() for u in self.custom_text.get("1.0", tk.END).splitlines() if u.strip()]
 
-        # Validate thread count
         try:
             thread_count = self.thread_count_var.get()
             if thread_count < 1:
@@ -288,7 +275,6 @@ class DiscordUsernameChecker:
             messagebox.showerror("Error", "Invalid thread count")
             return
 
-        # Save current config
         self.save_config()
 
         self.custom_queue = queue.Queue()
@@ -303,7 +289,6 @@ class DiscordUsernameChecker:
         self.threads.clear()
         self.log("[*] Starting checking...")
 
-        # Start threads
         if mode in ("custom", "both") and not self.custom_queue.empty():
             for _ in range(thread_count):
                 t = threading.Thread(target=self.worker, args=(False, self.webhook_custom_entry.get()))
@@ -318,7 +303,6 @@ class DiscordUsernameChecker:
                 t.start()
                 self.threads.append(t)
 
-        # Monitor threads to enable stop button when done
         threading.Thread(target=self.monitor_threads, daemon=True).start()
 
     def monitor_threads(self):
@@ -335,7 +319,6 @@ class DiscordUsernameChecker:
             return
         self.stop_event.set()
         self.log("[*] Stopping...")
-        # Threads will exit soon
 
 def main():
     root = tk.Tk()
